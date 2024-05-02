@@ -1,0 +1,940 @@
+symbol table 
+
+import os
+LC = 0  
+mnemonics = {
+    'STOP': ('00', 'IS', 0),
+    'ADD': ('01', 'IS', 2),
+    'SUB': ('02', 'IS', 2),
+    'MUL': ('03', 'IS', 2),
+    'MOVER': ('04', 'IS', 2),
+    'MOVEM': ('05', 'IS', 2),
+    'COMP': ('06', 'IS', 2),
+    'BC': ('07', 'IS', 2),
+    'DIV': ('08', 'IS', 2),
+    'READ': ('09', 'IS', 1),
+    'PRINT': ('10', 'IS', 1),
+    'LTORG': ('05', 'AD', 0),
+    'ORIGIN': ('03', 'AD', 1),
+    'START': ('01', 'AD', 1),
+    'EQU': ('04', 'AD', 2),
+    'DS': ('01', 'DL', 1),
+    'DC': ('02', 'DL', 1),
+    'END': ('AD', 0)
+}
+REG = {'AREG': 1, 'BREG': 2, 'CREG': 3, 'DREG': 4}
+symtab = {}   
+symindex = 0
+def detect_mn(k):
+    global words, LC, symtab, symindex
+    mnemonic = words[k]
+
+    if mnemonic == "START":
+        LC = int(words[1])
+    elif mnemonic == "END":
+        pass
+    elif mnemonic == "LTORG":
+        pass
+    elif mnemonic == "ORIGIN":
+        LC = int(words[k + 1])
+    elif mnemonic == "DS":
+        LC += int(words[k + 1])
+    elif mnemonic == "DC":
+        LC += 1
+    else:
+        LC += 1
+def symbol():
+    print("Symbol Table:")
+    for key, value in symtab.items():
+        print(f"{key}\t{value[0]}\t{value[1]}")
+file = open(r"INPUT CODE 1.txt")
+for line in file:
+    words = line.split()
+    k = 0
+    if words[0] in mnemonics:
+        detect_mn(k)
+    else:
+        if words[k] not in symtab:
+            symtab[words[k]] = (LC, symindex)
+            symindex += 1
+        else:
+            x = symtab[words[k]]
+            if x[0] == "**":
+                symtab[words[k]] = (LC, x[1])
+        k = 1
+        detect_mn(k)
+symbol()
+
+file.close()
+
+
+
+
+
+
+InterMediate Code 
+
+import os
+LC=0  #location counter initialization
+
+mnemonics={'STOP':('00','IS',0),'ADD':('01','IS',2),'SUB':('02','IS',2),'MUL':('03','IS',2),'MOVER':('04','IS',2),'MOVEM':('05','IS',2),'COMP':('06','IS',2),'BC':('07','IS',2),'DIV':('08','IS',2),'READ':('09','IS',1),'PRINT':('10','IS',1),'LTORG':('05','AD',0),'ORIGIN':('03','AD',1),'START':('01','AD',1),'EQU':('04','AD',2),'DS':('01','DL',1),'DC':('02','DL',1),'END':('AD',0)}
+file=open(r"INPUT CODE 4.txt")
+ifp=open("inter_code.txt","a")  
+ifp.truncate(0)                 
+REG={'AREG':1,'BREG':2,'CREG':3,'DREG':4}  
+lit=open("literals.txt","a+")    
+lit.truncate(0)
+tmp=open("tmp.txt","a+")
+tmp.truncate(0)
+symtab={}   
+pooltab=[]	
+words=[]
+
+def littab():
+    print("literal table:")
+    lit.seek(0,0)
+    for x in lit:
+        print(x)
+
+def pooltab2():
+    global pooltab
+    print("Pool Table:")
+    print(pooltab)
+
+def symbol():
+    global symtab
+    print("Symbol Table:")
+    print(symtab)
+       
+def END():
+    global LC
+    pool=0
+    z=0
+    ifp.write("\t(AD,02)\n")
+    lit.seek(0,0)
+    for x in lit:
+        if "**" in x:
+            pool+=1
+            if pool==1:
+                pooltab.append(z)
+            y=x.split()
+            tmp.write(y[0]+"\t"+str(LC)+"\n")
+            LC+=1
+        else:
+            tmp.write(x)
+        z+=1
+    lit.truncate(0)
+    tmp.seek(0,0)
+    for x in tmp:
+        lit.write(x)
+    tmp.truncate(0)
+
+def LTORG():
+    global LC
+    pool=0
+    z=0
+    lit.seek(0,0)
+    x=lit.readlines()
+    i=0
+    while(i<len(x)):
+        f=[]
+        if("**" in x[i]):
+            j=0
+            pool+=1
+            if pool==1:
+                pooltab.append(z)
+            while(x[i][j]!="'"):
+                j+=1
+            j+=1
+            while(x[i][j]!="'"):
+                f.append(x[i][j])
+                j+=1
+            if(i!=len(x)-1):
+                ifp.write("\t(AD,05)\t(DL,02)(C,"+str(f[0])+")\n")
+                y=x[i].split()
+                tmp.write(y[0]+"\t"+str(LC)+"\n")
+                LC+=1
+                ifp.write(str(LC))
+            else:
+                ifp.write("\t(AD,05)\t(DL,02)(C,"+str(f[0])+")\n")
+                y=x[i].split()
+                tmp.write(y[0]+"\t"+str(LC)+"\n")
+                LC+=1
+        else:
+            tmp.write(x[i])
+        z+=1
+        i+=1
+    lit.truncate(0)
+    tmp.seek(0,0)
+    for x in tmp:
+        lit.write(x)
+    tmp.truncate(0)
+
+def ORIGIN(addr):
+    global LC
+    ifp.write("\t(AD,03)\t(C,"+str(addr)+")\n")
+    LC =int(addr)
+
+def DS(size):
+    global LC
+    ifp.write("\t(DL,01)\t(C,"+size+")\n")
+    LC=LC+int(size)
+
+def DC(value):
+    global LC
+    ifp.write("\t(DL,02)\t(C,"+value+")\n")
+    LC+=1
+   
+def OTHERS(mnemonic,k):
+    global words
+    global mnemonics 
+    global symtab
+    global LC,symindex
+    z=mnemonics[mnemonic]
+    ifp.write("\t("+z[1]+","+z[0]+")\t")
+    i=0
+    y=z[-1]
+    #print("y="+str(y))
+    for i in range(1,y+1):
+        words[k+i]=words[k+i].replace(",","")
+        if(words[k+i] in REG.keys()):
+            ifp.write("(RG,"+str(REG[words[k+i]])+")")
+        elif("=" in words[k+i]):
+            #print(words[k+i])
+            lit.seek(0,2)
+            lit.write(words[k+i]+"\t**\n")
+            lit.seek(0,0)
+            x=lit.readlines()
+            #print(len(x))
+            ifp.write("(L,"+str(len(x))+")")
+        else:
+            #print(words,symtab)
+            if(words[k+i] not in symtab.keys()):
+                symtab[words[k+i]]=("**",symindex)
+                ifp.write("(S,"+str(symindex)+")")
+                symindex+=1
+            else:
+                w=symtab[words[k+i]]
+                ifp.write("(S,"+str(w[-1])+")")
+    #print(symtab)
+    ifp.write("\n")
+    LC+=1
+   
+def detect_mn(k):
+    global words,LC
+    if(words[k]=="START"):
+        LC=int(words[1])
+        ifp.write("\t(AD,01)\t(C,"+str(LC)+')\n')
+    elif(words[k]=='END'):
+        END()
+    elif(words[k]=="LTORG"):
+       LTORG()
+    elif(words[k]=="ORIGIN"):
+       ORIGIN(words[k+1])
+    elif(words[k]=="DS"):
+        DS(words[k+1])
+    elif(words[k]=="DC"):
+        DC(words[k+1])
+    else:
+        OTHERS(words[k],k)
+    littab()
+    pooltab2()
+    symbol()
+
+symindex=0
+for line in file:
+    #print(line)
+    words=line.split()
+    #print(words)
+    if(LC>0):
+        ifp.write(str(LC))
+    print("LC=",LC)
+    print(line)
+    print(words)
+    k=0
+        
+    if words[0] in mnemonics.keys():
+        print("Mnemonic:",words[0])
+        val=mnemonics[words[0]]
+        k=0
+        detect_mn(k)
+    else:
+        print("Label:",words[0],"Mnemonic:",words[1])
+        if words[k] not in symtab.keys():
+            symtab[words[k]]=(LC,symindex)
+            #ifp.write("\t(S,"+str(symindex)+")\t")
+            symindex+=1
+            symbol()
+        else:
+            #print(words)
+            x=symtab[words[k]]
+            if x[0]=="**":
+                print("yes")
+                symtab[words[k]]=(LC,x[1])
+            #ifp.write("\t(S,"+str(symindex)+")\t")
+            symbol()
+        k=1
+        detect_mn(k)
+#print(symtab)
+#print(pooltab)
+ifp.close()
+lit.close()
+tmp.close()
+sym=open("SymTab.txt","a+")
+sym.truncate(0)
+for x in symtab:
+    sym.write(x+"\t"+str(symtab[x][0])+"\n")
+sym.close()
+pool=open("PoolTab.txt","a+")
+pool.truncate(0)
+for x in pooltab:
+    pool.write(str(x)+"\n")
+pool.close()
+if os.path.exists("tmp.txt")==True:
+    os.remove("tmp.txt")
+
+
+
+
+
+MNT_MDT 
+
+def generate_tables(input_file):
+    MNT = {}
+    MDT = {}
+    ALA = {}
+    mdt_pointer = 0
+    mstart = False
+    macro_name = None
+
+    try:
+        with open(input_file, "r") as fr:
+            for line in fr:
+                indv = line.strip().split()
+                if len(indv) == 0:
+                    continue
+                if indv[0] == "MACRO":
+                    mstart = True
+                    macro_name = indv[1]
+                    if macro_name not in MNT:
+                        MNT[macro_name] = mdt_pointer + 1
+                    MDT[mdt_pointer + 1] = f"{macro_name} {line.strip()}"
+                    ALA.clear()
+                    continue
+                if mstart:
+                    if indv[0] == "MEND":
+                        MDT[mdt_pointer + 1] = "MEND"
+                        mdt_pointer += 1
+                        mstart = False
+                        macro_name = None
+                    else:
+                        MDT[mdt_pointer + 1] = line.strip()
+                        mdt_pointer += 1
+                        for i in range(1, len(indv)):
+                            if indv[i][0] == '&':
+                                ALA[indv[i]] = "#" + str(i)
+        return MNT, MDT
+
+    except IOError as e:
+        print("I/O error occurred:", e)
+        return None, None
+
+# Example usage:
+input_file = "INPUT CODE 6.txt"  # Specify the input file path here
+MNT, MDT = generate_tables(input_file)
+
+if MNT and MDT:
+    print("!!-- MNT Table --!!")
+    print("MACRO Address")
+    for macro_name, address in MNT.items():
+        print(f"{macro_name}\t{address}")
+
+    print("\n!!-- MDT Table --!!")
+    print("Address \t Definition")
+    for address, definition in MDT.items():
+        print(f"{address}\t\t{definition}")
+
+
+
+
+q8l
+
+%{ 
+/*parts of speech recognizer*/
+%}
+
+%%
+[\t]+;
+is |
+am |
+are |
+ran {printf("\n%s, is a verb", yytext);}
+
+quickly |
+slowly {printf("\n%s, is an adverb", yytext);}
+
+Ram |
+Shyam {printf("\n%s, is a noun", yytext);}
+
+[a-zA-Z]+ {printf("\n%s, is an invalid token", yytext);}
+%%
+
+int yywrap(void){
+	return 1;
+}
+
+void main(){
+	yylex();
+	yywrap();
+}
+
+
+
+
+q9l
+
+%{
+int COMMENT = 0;
+%}
+
+%%
+[\t]+;
+; ;
+{ ;
+} ;
+#.* {printf("\n%s is a preprocessor directive", yytext);}
+
+int |
+float |
+char |
+String {printf("\n%s is a datatype", yytext);}
+
+if |
+break |
+continue |
+goto {printf("\n%s is a keyword", yytext);}
+
+\+ |
+\- |
+\* |
+\\ |
+\= {printf("\n%s is an operator", yytext);}
+
+[a-zA-Z][a-zA-Z0-9]* {printf("\n%s is an identifier", yytext);}
+
+%%
+
+int yywrap(){
+	return (1);
+}
+
+void main(){
+	yylex();
+	yywrap();
+}
+
+
+
+
+
+q10y
+
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+// Function prototypes
+int yylex(void);
+void yyerror(const char *);
+
+// Define YYSTYPE as a double
+#define YYSTYPE double
+
+%}
+
+%token NUM
+
+%left '+' '-'
+%left '*' '/'
+
+%%
+
+expression:  
+expr 
+{
+	printf("Result: %.2f\n", $1); 
+ 	return 0;
+}
+    ;
+    
+expr: expr '+' expr     { $$ = $1 + $3; }
+    | expr '-' expr     { $$ = $1 - $3; }
+    | expr '*' expr     { $$ = $1 * $3; }
+    | expr '/' expr     { $$ = $1 / $3; }
+    | '(' expr ')'      { $$ = $2; }
+    | NUM               { $$ = $1; }
+    ;
+
+
+%%
+
+int yylex() {
+    int c;
+    do {
+        c = getchar();
+    } while (c == ' ' || c == '\t');
+    if (isdigit(c) || c == '.') {
+        ungetc(c, stdin);
+        scanf("%lf", &yylval);
+        return NUM;
+    }
+    return c;
+}
+
+void yyerror(const char *s) {
+    fprintf(stderr, "%s\n", s);
+}
+
+int main() {
+printf("\nEnter Any Arithmetic Expression :");
+    yyparse();
+    return 0;
+}
+
+
+
+
+
+q11Al
+
+%{
+#include "QUESTION11A.tab.h"
+%}
+
+%%
+[a-zA-Z_][a-zA-Z_0-9]*  { return IDENTIFIER; }
+.                      { yyerror("Invalid input"); }
+%%
+
+int yywrap(void) {
+    return 1;
+}
+
+
+q11Ay
+
+%{
+#include <stdio.h>
+#include <stdlib.h>
+
+// Declare yytext for use in the parser
+extern char* yytext;
+
+void yyerror(const char *s);
+int yylex(void);
+
+%}
+
+%token IDENTIFIER
+
+%%
+
+input:
+    identifiers
+    ;
+
+identifiers:
+    | identifiers IDENTIFIER { printf("Valid variable name: %s\n", yytext); }
+    ;
+
+%%
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+    exit(1);
+}
+
+int main(void) {
+    printf("Enter variable names (Ctrl+D to end):\n");
+    yyparse();
+    return 0;
+}
+
+
+
+
+
+
+q11Bl
+
+%{
+#include "QUESTION11B.tab.h"
+#include <ctype.h>
+%}
+
+%%
+[a-z]+ { 
+    for (int i = 0; i < yyleng; i++) {
+        yytext[i] = toupper(yytext[i]); 
+    }
+    yylval = yytext;
+    return STRING; 
+}
+
+[A-Z]+ {
+    for (int i = 0; i < yyleng; i++) {
+        yytext[i] = tolower(yytext[i]); 
+    }
+    yylval = yytext;
+    return STRING; 
+}
+
+[a-zA-Z]+ {
+    for (int i = 0; i < yyleng; i++) {
+        if (isupper(yytext[i])) {
+            yytext[i] = tolower(yytext[i]);
+        } else {
+            yytext[i] = toupper(yytext[i]);
+        }
+    }
+    yylval = yytext;
+    return STRING; 
+}
+
+.|\n     { 
+    yylval = yytext;
+    return STRING; 
+}
+%%
+
+int yywrap() {
+    return 1;
+}
+
+
+q11By
+
+%{
+#include <stdio.h>
+#include <ctype.h>
+%}
+
+%token STRING
+
+%%
+
+input:
+    line
+    ;
+
+line:
+    STRING {
+        printf("Converted: %s\n", $1);
+    }
+    ;
+
+%%
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+int main() {
+    // Prompt the user to enter input
+    printf("Please enter your text: ");
+    return yyparse();
+}
+
+
+
+
+
+
+q11Cl
+%{
+#include "QUESTION11C.tab.h"
+#include <stdlib.h>
+#include <string.h>
+%}
+
+%option noyywrap
+
+%%
+[0-9]+      { yylval.ival = atoi(yytext); return NUMBER; }
+\"[^\"]*\"  { yylval.sval = strdup(yytext); return STRING; }
+"sqrt"      { return SQRT; }
+"strlen"    { return STRLEN; }
+"="         { return '='; }
+[ \t\n]+    { /* ignore whitespace */ }
+.           { return yytext[0]; }
+
+%%
+
+
+q11Cy
+%{
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
+extern int yylex();
+void yyerror(const char *s) { fprintf(stderr, "%s\n", s); }
+%}
+
+%union {
+    int ival;
+    char *sval;
+}
+
+%token <sval> STRING
+%token <ival> NUMBER SQRT STRLEN
+%type <ival> expr function
+%type <sval> var
+
+%%
+program:
+    program statement
+    |
+    ;
+
+statement:
+    var '=' expr { printf("%s = %d\n", $1, $3); }
+    ;
+
+var:
+    'u' { $$ = strdup("u"); }
+    | 'v' { $$ = strdup("v"); }
+    ;
+
+expr:
+    function
+    ;
+
+function:
+    SQRT '(' NUMBER ')' { $$ = (int) sqrt($3); }
+    | STRLEN '(' STRING ')' { $$ = strlen($3) - 2; /* Subtract 2 for the quotes */ }
+    ;
+
+%%
+
+int main(void) {
+    printf("Enter expressions like 'u = sqrt(36)' or 'v = strlen(\"pune\")':\n");
+    return yyparse();
+}
+
+
+
+
+
+
+q11Dl
+%{
+#include "QUESTION11D.tab.h" // make sure this matches your Bison-generated header
+#include <math.h>
+#include <string.h>
+%}
+
+%option noyywrap
+%option yylineno
+
+%%
+
+[uU][a-zA-Z_]*          { yylval.var = strdup(yytext); return VARIABLE; }
+[0-9]+(\.[0-9]+)?       { yylval.num = atof(yytext); return NUMBER; }
+"sin"                   { return SIN; }
+"cos"                   { return COS; }
+"+"                     { return PLUS; }
+"-"                     { return MINUS; }
+"*"                     { return TIMES; }
+"/"                     { return DIVIDE; }
+"("                     { return LPAREN; }
+")"                     { return RPAREN; }
+"="                     { return EQUALS; }
+";"                     { return SEMICOLON; }
+[ \t]+                  ; // Ignore whitespace
+.                       { return yytext[0]; } // Handle other characters
+
+%%
+
+
+q11Dy
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>        // Include for math functions
+#include "QUESTION11D.tab.h"   // Ensure this is the header generated by Flex
+
+void yyerror(const char *s);
+int yylex(void);
+extern int yylineno;    // External declaration if using %option yylineno in Flex
+
+double vars[256];       // Simple variable storage based on ASCII index
+%}
+
+%union {
+    double num;         // For numerical values
+    char* var;          // For variable names
+}
+
+%token <var> VARIABLE
+%token <num> NUMBER
+%token SIN COS
+%token PLUS MINUS TIMES DIVIDE
+%token LPAREN RPAREN
+%token EQUALS SEMICOLON
+
+%type <num> expression term factor
+%type <var> assignment
+
+%%
+input:
+      | input line
+      ;
+
+line:
+      assignment SEMICOLON { printf("%s = %f\n", $1, vars[$1[0]]); }
+    | error SEMICOLON      { yyerror("syntax error"); }
+    ;
+
+assignment:
+      VARIABLE EQUALS expression { vars[$1[0]] = $3; $$ = $1; }
+    ;
+
+expression:
+      expression PLUS term   { $$ = $1 + $3; }
+    | expression MINUS term  { $$ = $1 - $3; }
+    | term                   { $$ = $1; }
+    ;
+
+term:
+      term TIMES factor      { $$ = $1 * $3; }
+    | term DIVIDE factor     { $$ = $1 / $3; }
+    | factor                 { $$ = $1; }
+    ;
+
+factor:
+      NUMBER                 { $$ = $1; }
+    | VARIABLE               { $$ = vars[$1[0]]; }
+    | LPAREN expression RPAREN { $$ = $2; }
+    | SIN LPAREN expression RPAREN { $$ = sin($3); }
+    | COS LPAREN expression RPAREN { $$ = cos($3); }
+    ;
+
+%%
+void yyerror(const char *s) {
+    fprintf(stderr, "Error near line %d: %s\n", yylineno, s);
+}
+
+int main(void) {
+    printf("Enter expressions (e.g., 'u = sin(12) + cos(12);'):\n");
+    yyparse();
+    return 0;
+}
+
+
+
+
+
+
+q11El
+%{
+#include "QUESTION11E.tab.h"
+#include <math.h>
+#include <string.h>
+extern void yyerror(const char *);
+%}
+
+%option noyywrap
+
+%%
+
+[ \t\n]+                  { /* Ignore whitespace */ }
+[a-zA-Z_][a-zA-Z0-9_]*    {
+    if (strcmp(yytext, "pow") == 0) return POW;
+    if (strcmp(yytext, "log") == 0) return LOG;
+    yylval.str = strdup(yytext); 
+    return IDENTIFIER; 
+}
+[0-9]+(\.[0-9]+)?         { yylval.num = atof(yytext); return NUMBER; }
+"="                       { return '='; }
+";"                       { return ';'; }
+"("                       { return '('; }
+")"                       { return ')'; }
+","                       { return ','; }
+"+"                       { return '+'; }
+"-"                       { return '-'; }
+"/"                       { return '/'; }
+.                        { yyerror("Invalid character"); }
+
+%%
+
+
+
+q11Ey
+%{
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+void yyerror(const char *s);
+extern int yylex();
+%}
+
+%union {
+    double num;        // For numerical values
+    char* str;         // For string values (e.g., identifiers)
+}
+
+%token <str> IDENTIFIER
+%token <num> NUMBER
+%token POW LOG
+%type <num> expr     // Expressions return a numeric value
+%type <num> statement  // Statements return a numeric value (for expression statements)
+
+%left '+' '-'
+%left '*' '/'
+%right NEG
+
+%%
+
+program:
+    | program statement
+    ;
+
+statement:
+      expr ';' { printf("Result = %lf\n", $1); }
+    | IDENTIFIER '=' expr ';' {
+        printf("%s = %lf\n", $1, $3);
+        free($1);
+    }
+    ;
+
+expr:
+      NUMBER                   { $$ = $1; }
+    | IDENTIFIER               { printf("Variable [%s] used, but not defined in this scope.\n", $1); free($1); $$ = 0; }
+    | expr '+' expr            { $$ = $1 + $3; }
+    | expr '-' expr            { $$ = $1 - $3; }
+    | expr '*' expr            { $$ = $1 * $3; }
+    | expr '/' expr            { $$ = $1 / $3; }
+    | '-' expr %prec NEG       { $$ = -$2; }
+    | '(' expr ')'             { $$ = $2; }
+    | POW '(' expr ',' expr ')' { $$ = pow($3, $5); }
+    | LOG '(' expr ')'         { $$ = log($3); }
+    ;
+
+%%
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+int main(void) {
+    printf("Enter an expression:\n");
+    yyparse();
+    return 0;
+}
+
+
+
+
